@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>
+    <%= htmlWebpackPlugin.options.title %>
+  </title>
+</head>
+
+<body>
+  <div class="jumbotron">
+    <h1 class="display-4">
+      <%= htmlWebpackPlugin.options.title %>
+    </h1>
+    <p class="lead">This is a simple RSS reader.</p>
+    <hr class="my-4">
+    <form>
+      <div class="form-group row">
+        <div class="col-2">
+          <input class="form-control" type="text" placeholder="Name" name="rss">
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </div>
+    </form>
+  </div>
+</body>
+
+</html>
