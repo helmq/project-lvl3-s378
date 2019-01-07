@@ -3,6 +3,12 @@
   "version": "0.0.1",
   "description": "RSS reader",
   "main": "index.js",
+  "jest": {
+    "testEnvironment": "node",
+    "modulePathIgnorePatterns": [
+      "<rootDir>/__tests__/__fixtures__/"
+    ]
+  },
   "scripts": {
     "test": "jest",
     "babel-node": "babel-node",
