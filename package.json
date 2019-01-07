@@ -1,0 +1,40 @@
+{
+  "name": "rss-reader_helmq",
+  "version": "0.0.1",
+  "description": "RSS reader",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/helmq/project-lvl3-s378.git"
+  },
+  "keywords": [
+    "rss"
+  ],
+  "author": "helmq",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/helmq/project-lvl3-s378/issues"
+  },
+  "homepage": "https://github.com/helmq/project-lvl3-s378#readme",
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.3",
+    "babel-eslint": "^10.0.1",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-stage-0": "^6.24.1",
+    "eslint": "^5.12.0",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-plugin-import": "^2.14.0",
+    "eslint-plugin-jest": "^22.1.2",
+    "html-webpack-plugin": "^3.2.0",
+    "jest": "^23.6.0",
+    "webpack": "^4.28.3",
+    "webpack-cli": "^3.2.0"
+  },
+  "dependencies": {
+    "bootstrap": "^4.2.1"
+  }
+}
