@@ -26,6 +26,7 @@ export default () => {
   const addArticles = (items) => { state.articles = [...state.articles, ...items]; };
   const addChannel = (data) => { state.channels = [...state.channels, data]; };
   const addUrl = (url) => { state.urlList.add(url); };
+  const removeUrl = (url) => { state.urlList.remove(url); };
 
   const getFieldData = (node, fieldName) => _.find(node, n => n.nodeName === fieldName)
     .firstChild.data;
@@ -55,6 +56,7 @@ export default () => {
       state.errorMessage = 'URL is already added';
       return false;
     }
+    addUrl(url);
     axios.get(proxy + url).then(({ data }) => {
       const parser = new DOMParser();
       const parsedData = parser.parseFromString(data, 'application/xml');
@@ -76,11 +78,11 @@ export default () => {
       const description = getFieldData(channel, 'description');
       addChannel({ title, description });
       addArticles(articles);
-      addUrl(url);
       form.reset();
       updateFeed();
     }).catch((e) => {
       state.errorMessage = e.message;
+      removeUrl(url);
     });
     return true;
   };
