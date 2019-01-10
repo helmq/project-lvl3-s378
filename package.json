@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "description": "RSS reader",
   "jest": {
-    "testEnvironment": "node",
     "modulePathIgnorePatterns": [
       "<rootDir>/__tests__/__fixtures__/"
     ]
