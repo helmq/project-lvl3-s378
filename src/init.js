@@ -1,67 +1,67 @@
 import { watch } from 'melanke-watchjs';
 import { isURL } from 'validator';
 import axios from 'axios';
-import _ from 'lodash';
-// import submit from './rss';
+import { find } from 'lodash';
 
 const proxy = 'http://cors-anywhere.herokuapp.com/';
 
 export default () => {
   const state = {
     url: '',
-    valid: true,
+    isUrlValid: true,
     errorMessage: '',
     urlList: new Set(),
     channels: [],
     articles: [],
+    request: {
+      submitting: false,
+      succeed: false,
+    },
   };
 
-  const form = document.getElementById('rss-form');
-  const input = form.elements.url;
-  const channelsFeed = document.getElementById('channels-feed');
-  const articlesFeed = document.getElementById('articles-feed');
+  const validateUrl = url => isURL(url) || url === '';
+  const getFieldData = (node, fieldName) => find(node, n => n.nodeName === fieldName)
+    .firstChild.data;
 
-  const setUrl = (val) => { state.url = val; };
-  const setValidUrl = (isValid) => { state.valid = isValid; };
+  const setUrl = (url) => {
+    const isUrlValid = validateUrl(url);
+    if (isUrlValid) {
+      state.errorMessage = '';
+    }
+    state.isUrlValid = isUrlValid;
+    state.url = url;
+  };
   const addArticles = (items) => { state.articles = [...state.articles, ...items]; };
   const addChannel = (data) => { state.channels = [...state.channels, data]; };
   const addUrl = (url) => { state.urlList.add(url); };
-  const removeUrl = (url) => { state.urlList.remove(url); };
-
-  const getFieldData = (node, fieldName) => _.find(node, n => n.nodeName === fieldName)
-    .firstChild.data;
-
-  const updateFeed = () => {
-    const channels = state.channels.map(({ title, description }) => `
-      <div>
-        <h3>${title}</h3>
-        <p>${description}</p>
-      </div>`);
-    const articles = state.articles.map(({ title, description, link }) => `
-        <div>
-          <a href="${link}" target="_blank"><h4>${title}</h4></a>
-          <p>${description}</p>
-        </div>
-      `);
-    channelsFeed.innerHTML = channels.join('');
-    articlesFeed.innerHTML = articles.join('');
+  const removeUrl = (url) => { state.urlList.delete(url); };
+  const toggleRequestState = (submitting, succeed = false) => {
+    state.request.submitting = submitting;
+    state.request.succeed = succeed;
+  };
+  const submitFail = (url, errorMessage) => {
+    state.errorMessage = errorMessage;
+    removeUrl(url);
+    toggleRequestState(false, false);
   };
 
-  const submit = (url) => {
-    if (!state.valid || state.url === '') {
+  const submit = () => {
+    const { url, valid, urlList } = state;
+    if (valid || url === '') {
       state.errorMessage = 'Please enter correct URL';
       return false;
     }
-    if (state.urlList.has(url)) {
-      state.errorMessage = 'URL is already added';
+    if (urlList.has(url)) {
+      state.errorMessage = 'URL is already exists';
       return false;
     }
+    toggleRequestState(true);
     addUrl(url);
     axios.get(proxy + url).then(({ data }) => {
       const parser = new DOMParser();
       const parsedData = parser.parseFromString(data, 'application/xml');
       if (parsedData.firstChild.nodeName !== 'rss') {
-        state.errorMessage = 'Given URL contains wrong data';
+        submitFail(url, 'Given URL contains wrong data');
         return;
       }
       const channel = parsedData.firstChild.firstChild.childNodes;
@@ -78,31 +78,29 @@ export default () => {
       const description = getFieldData(channel, 'description');
       addChannel({ title, description });
       addArticles(articles);
-      form.reset();
-      updateFeed();
+      toggleRequestState(false, true);
     }).catch((e) => {
-      state.errorMessage = e.message;
-      removeUrl(url);
+      submitFail(url, e.message);
     });
     return true;
   };
 
-  watch(state, 'url', () => {
-    if (isURL(state.url) || state.url === '') {
-      setValidUrl(true);
-    } else {
-      setValidUrl(false);
-    }
-  });
-  watch(state, 'valid', () => {
-    if (state.valid) {
-      state.errorMessage = '';
+  const form = document.getElementById('rss-form');
+  const input = form.elements.url;
+  const channelsFeed = document.getElementById('channels-feed');
+  const articlesFeed = document.getElementById('articles-feed');
+  watch(state, 'isUrlValid', () => {
+    if (state.isUrlValid) {
       input.classList.remove('is-invalid');
     } else {
       input.classList.add('is-invalid');
     }
   });
   watch(state, 'errorMessage', () => {
+    const currentFeedbackEl = input.parentNode.querySelector('.invalid-feedback');
+    if (currentFeedbackEl) {
+      input.parentNode.removeChild(currentFeedbackEl);
+    }
     if (state.errorMessage !== '') {
       const feedbackEl = document.createElement('div');
       feedbackEl.classList.add('invalid-feedback');
@@ -111,8 +109,26 @@ export default () => {
       input.parentNode.appendChild(feedbackEl);
     } else {
       input.classList.remove('is-invalid');
-      const feedbackEl = input.parentNode.querySelector('.invalid-feedback');
-      input.parentNode.removeChild(feedbackEl);
+    }
+  });
+  watch(state, ['channels', 'articles'], () => {
+    const channels = state.channels.map(({ title, description }) => `
+      <div>
+        <h3>${title}</h3>
+        <p>${description}</p>
+      </div>`);
+    const articles = state.articles.map(({ title, description, link }) => `
+        <div>
+          <a href="${link}" target="_blank"><h4>${title}</h4></a>
+          <p>${description}</p>
+        </div>
+      `);
+    channelsFeed.innerHTML = channels.join('');
+    articlesFeed.innerHTML = articles.join('');
+  });
+  watch(state.form, 'succeed', () => {
+    if (state.form.succed) {
+      form.reset();
     }
   });
 
