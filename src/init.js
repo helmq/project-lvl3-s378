@@ -146,7 +146,7 @@ export default () => {
     form.reset();
   });
 
-  input.addEventListener('input', (e) => { console.log(state.errorMessage); setUrl(e.target.value); });
+  input.addEventListener('input', (e) => { setUrl(e.target.value); });
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     requestUrl();
