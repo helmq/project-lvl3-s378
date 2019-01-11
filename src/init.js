@@ -21,8 +21,24 @@ export default () => {
   };
 
   const validateUrl = url => isURL(url) || url === '';
-  const getFieldData = (node, fieldName) => find(node, n => n.nodeName === fieldName)
-    .firstChild.data;
+  const parseRSS = (rss) => {
+    const channelTitle = rss.querySelector('title').textContent;
+    const channelDescription = rss.querySelector('description').textContent;
+    const items = rss.querySelectorAll('item');
+    const articles = Object.keys(items).map(key => items[key])
+      .map((article) => {
+        const title = article.querySelector('title').textContent;
+        const description = article.querySelector('description').textContent;
+        const link = article.querySelector('link').textContent;
+        return {
+          title,
+          description,
+          link,
+          id: uniqueId(),
+        };
+      });
+    return { title: channelTitle, description: channelDescription, articles };
+  };
 
   const setUrl = (url) => {
     const isUrlValid = validateUrl(url);
@@ -36,63 +52,45 @@ export default () => {
   const addChannel = (data) => { state.channels = [...state.channels, data]; };
   const addUrl = (url) => { state.urlList.add(url); };
   const removeUrl = (url) => { state.urlList.delete(url); };
-  const toggleRequestState = (submitting, succeed = false) => {
-    state.request.submitting = submitting;
-    state.request.succeed = succeed;
-  };
   const submitFail = (url, errorMessage) => {
     state.errorMessage = errorMessage;
     removeUrl(url);
-    toggleRequestState(false, false);
+    state.request.submitting = false;
+    state.request.succeed = false;
   };
 
-  const submit = () => {
-    const { url, valid, urlList } = state;
-    if (valid || url === '') {
+  const requestUrl = () => {
+    const { url, isUrlValid, urlList } = state;
+    if (!isUrlValid || url === '') {
       state.errorMessage = 'Please enter correct URL';
-      return false;
+      return;
     }
     if (state.request.submitting) {
       state.errorMessage = 'Please wait';
-      return false;
+      return;
     }
     if (urlList.has(url)) {
       state.errorMessage = 'URL is already exists';
-      return false;
+      return;
     }
-    toggleRequestState(true);
+    state.request.submitting = true;
     addUrl(url);
-    axios.get(proxy + url).then(({ data }) => {
+    axios.get(`${proxy}${url}`).then(({ data }) => {
       const parser = new DOMParser();
       const parsedData = parser.parseFromString(data, 'application/xml');
-      if (parsedData.firstChild.nodeName !== 'rss') {
+      const rss = parsedData.querySelector('rss');
+      if (!rss) {
         submitFail(url, 'Given URL contains wrong data');
         return;
       }
-      const channel = parsedData.firstChild.firstChild.childNodes;
-      const articles = Object.keys(channel)
-        .filter(index => channel[index].nodeName === 'item')
-        .map((index) => {
-          const article = channel[index].childNodes;
-          const title = getFieldData(article, 'title');
-          const description = getFieldData(article, 'description');
-          const link = getFieldData(article, 'link');
-          return {
-            title,
-            description,
-            link,
-            id: Number(uniqueId()),
-          };
-        });
-      const title = getFieldData(channel, 'title');
-      const description = getFieldData(channel, 'description');
+      const { title, description, articles } = parseRSS(rss);
       addChannel({ title, description });
       addArticles(articles);
-      toggleRequestState(false, true);
+      state.request.submitting = false;
+      state.request.succeed = true;
     }).catch((e) => {
       submitFail(url, e.message);
     });
-    return true;
   };
 
   const form = document.getElementById('rss-form');
@@ -142,14 +140,14 @@ export default () => {
       `);
     channelsFeed.innerHTML = channelsHTML.join('');
     articlesFeed.innerHTML = articlesHTML.join('<hr>');
-    $('button[data-toggle=modal]').each((i, button) => {
-      $(button).click(() => {
-        const id = $(button).data('id');
-        const { description } = find(articles, a => a.id === id);
-        const modalBody = modal.querySelector('.modal-body');
-        modalBody.innerHTML = `<p>${description}</p>`;
-        $(modal).modal('show');
-      });
+    $('button[data-toggle=modal]').click((e) => {
+      const { id } = e.target.dataset;
+      const { description, title } = find(articles, a => a.id === id);
+      const modalBody = modal.querySelector('.modal-body');
+      const modalTitle = modal.querySelector('.modal-title');
+      modalBody.innerHTML = `<p>${description}</p>`;
+      modalTitle.innerHTML = title;
+      $(modal).modal('show');
     });
   });
   watch(state.request, 'succeed', () => {
@@ -161,6 +159,6 @@ export default () => {
   input.addEventListener('input', (e) => { setUrl(e.target.value); });
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    submit(state.url);
+    requestUrl();
   });
 };
