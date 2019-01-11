@@ -64,6 +64,7 @@ export default () => {
         submitFail(url, 'Given URL contains wrong data');
         return;
       }
+      console.log(parsedData);
       const channel = parsedData.firstChild.firstChild.childNodes;
       const articles = Object.keys(channel)
         .filter(index => channel[index].nodeName === 'item')
@@ -114,7 +115,7 @@ export default () => {
   watch(state, ['channels', 'articles'], () => {
     const channels = state.channels.map(({ title, description }) => `
       <div>
-        <h3>${title}</h3>
+        <h4>${title}</h4>
         <p>${description}</p>
       </div>`);
     const articles = state.articles.map(({ title, description, link }) => `
@@ -126,8 +127,9 @@ export default () => {
     channelsFeed.innerHTML = channels.join('');
     articlesFeed.innerHTML = articles.join('');
   });
-  watch(state.form, 'succeed', () => {
-    if (state.form.succed) {
+  watch(state.request, 'succeed', () => {
+    console.log(state.request);
+    if (state.request.succeed) {
       form.reset();
     }
   });

@@ -9,26 +9,34 @@
 
 <body>
   <div class="jumbotron">
-    <h1 class="display-4">
-      <%= htmlWebpackPlugin.options.title %>
-    </h1>
-    <p class="lead">This is a simple RSS reader.</p>
-    <hr class="my-4">
-    <form id="rss-form">
-      <div class="form-group row">
-        <div class="col-5">
-          <input class="form-control" type="text" placeholder="Name" name="url">
+    <div class="container">
+      <h1 class="display-4">
+        <%= htmlWebpackPlugin.options.title %>
+      </h1>
+      <p class="lead">This is a simple RSS reader.</p>
+      <hr class="my-4">
+      <form id="rss-form">
+        <div class="form-group row">
+          <div class="col-5">
+            <input class="form-control" type="text" placeholder="Name" name="url">
+          </div>
+          <div class="col">
+            <button type="submit" class="btn btn-primary">Submit</button>
+          </div>
         </div>
-        <div class="col">
-          <button type="submit" class="btn btn-primary">Submit</button>
-        </div>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
   <div class="container">
     <div class="row">
-      <div id="channels-feed" class="col-6"></div>
-      <div id="articles-feed" class="col-6"></div>
+      <div class="col-6">
+        <h3>Channel list</h3>
+        <div id="channels-feed">Nothing added yet.</div>
+      </div>
+      <div class="col-6">
+        <h2>Feed</h2>
+        <div id="articles-feed"></div>
+      </div>
     </div>
   </div>
 </body>
