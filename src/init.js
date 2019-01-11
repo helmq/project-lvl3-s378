@@ -1,7 +1,8 @@
 import { watch } from 'melanke-watchjs';
 import { isURL } from 'validator';
 import axios from 'axios';
-import { find } from 'lodash';
+import { find, uniqueId } from 'lodash';
+import $ from 'jquery';
 
 const proxy = 'http://cors-anywhere.herokuapp.com/';
 
@@ -64,7 +65,6 @@ export default () => {
         submitFail(url, 'Given URL contains wrong data');
         return;
       }
-      console.log(parsedData);
       const channel = parsedData.firstChild.firstChild.childNodes;
       const articles = Object.keys(channel)
         .filter(index => channel[index].nodeName === 'item')
@@ -73,7 +73,12 @@ export default () => {
           const title = getFieldData(article, 'title');
           const description = getFieldData(article, 'description');
           const link = getFieldData(article, 'link');
-          return { title, description, link };
+          return {
+            title,
+            description,
+            link,
+            id: Number(uniqueId()),
+          };
         });
       const title = getFieldData(channel, 'title');
       const description = getFieldData(channel, 'description');
@@ -90,6 +95,8 @@ export default () => {
   const input = form.elements.url;
   const channelsFeed = document.getElementById('channels-feed');
   const articlesFeed = document.getElementById('articles-feed');
+  const modal = document.getElementById('description-modal');
+
   watch(state, 'isUrlValid', () => {
     if (state.isUrlValid) {
       input.classList.remove('is-invalid');
@@ -113,22 +120,35 @@ export default () => {
     }
   });
   watch(state, ['channels', 'articles'], () => {
-    const channels = state.channels.map(({ title, description }) => `
+    const { articles, channels } = state;
+    const channelsHTML = channels.map(({ title, description }) => `
       <div>
         <h4>${title}</h4>
         <p>${description}</p>
       </div>`);
-    const articles = state.articles.map(({ title, description, link }) => `
-        <div>
-          <a href="${link}" target="_blank"><h4>${title}</h4></a>
-          <p>${description}</p>
+    const articlesHTML = articles.map(({ title, id, link }) => `
+        <div class="row">
+          <div class="col-8">
+            <a href="${link}" target="_blank">${title}</a>
+          </div>
+          <div class="col">
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-id="${id}">Show description</button>
+          </div>
         </div>
       `);
-    channelsFeed.innerHTML = channels.join('');
-    articlesFeed.innerHTML = articles.join('');
+    channelsFeed.innerHTML = channelsHTML.join('');
+    articlesFeed.innerHTML = articlesHTML.join('<hr>');
+    $('button[data-toggle=modal]').each((i, button) => {
+      $(button).click(() => {
+        const id = $(button).data('id');
+        const { description } = find(articles, a => a.id === id);
+        const modalBody = modal.querySelector('.modal-body');
+        modalBody.innerHTML = `<p>${description}</p>`;
+        $(modal).modal('show');
+      });
+    });
   });
   watch(state.request, 'succeed', () => {
-    console.log(state.request);
     if (state.request.succeed) {
       form.reset();
     }
