@@ -52,6 +52,10 @@ export default () => {
       state.errorMessage = 'Please enter correct URL';
       return false;
     }
+    if (state.request.submitting) {
+      state.errorMessage = 'Please wait';
+      return false;
+    }
     if (urlList.has(url)) {
       state.errorMessage = 'URL is already exists';
       return false;
