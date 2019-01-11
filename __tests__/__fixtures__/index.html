@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>
+    RSS reader
+  </title>
+</head>
+
+<body>
+  <div class="jumbotron">
+    <h1 class="display-4">
+      RSS reader
+    </h1>
+    <p class="lead">This is a simple RSS reader.</p>
+    <hr class="my-4">
+    <form id="rss-form">
+      <div class="form-group row">
+        <div class="col-5">
+          <input class="form-control" type="text" placeholder="Name" name="url">
+        </div>
+        <div class="col">
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="container">
+    <div class="row">
+      <div id="channels-feed" class="col-6"></div>
+      <div id="articles-feed" class="col-6"></div>
+    </div>
+  </div>
+</body>
+
+</html>
