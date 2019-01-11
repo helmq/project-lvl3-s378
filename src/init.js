@@ -17,7 +17,6 @@ export default () => {
     submittingRequest: false,
   };
 
-  const validateUrl = url => isURL(url) || url === '';
   const parseRSS = (rss) => {
     const channelTitle = rss.querySelector('title').textContent;
     const channelDescription = rss.querySelector('description').textContent;
@@ -38,8 +37,8 @@ export default () => {
   };
 
   const setUrl = (url) => {
-    const isUrlValid = validateUrl(url);
-    if (isUrlValid) {
+    const isUrlValid = isURL(url);
+    if (isUrlValid || url === '') {
       state.errorMessage = '';
     }
     state.isUrlValid = isUrlValid;
@@ -57,7 +56,7 @@ export default () => {
 
   const requestUrl = () => {
     const { url, isUrlValid, urlList } = state;
-    if (!isUrlValid || url === '') {
+    if (!isUrlValid) {
       state.errorMessage = 'Please enter correct URL';
       return;
     }
@@ -94,14 +93,14 @@ export default () => {
   const articlesFeed = document.getElementById('articles-feed');
   const modal = document.getElementById('description-modal');
 
-  watch(state, 'isUrlValid', () => {
-    if (state.isUrlValid) {
+  watch(state, ['isUrlValid', 'errorMessage'], () => {
+    if (state.isUrlValid || state.errorMessage === '') {
       input.classList.remove('is-invalid');
-    } else {
+    }
+    if (!state.isUrlValid) {
       input.classList.add('is-invalid');
     }
-  });
-  watch(state, 'errorMessage', () => {
+
     const currentFeedbackEl = input.parentNode.querySelector('.invalid-feedback');
     if (currentFeedbackEl) {
       input.parentNode.removeChild(currentFeedbackEl);
@@ -112,8 +111,6 @@ export default () => {
       feedbackEl.textContent = state.errorMessage;
       input.classList.add('is-invalid');
       input.parentNode.appendChild(feedbackEl);
-    } else {
-      input.classList.remove('is-invalid');
     }
   });
   watch(state, ['channels', 'articles'], () => {
@@ -145,11 +142,11 @@ export default () => {
       $(modal).modal('show');
     });
   });
-  watch(state, 'articles', () => {
+  watch(state, 'channels', () => {
     form.reset();
   });
 
-  input.addEventListener('input', (e) => { setUrl(e.target.value); });
+  input.addEventListener('input', (e) => { console.log(state.errorMessage); setUrl(e.target.value); });
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     requestUrl();
