@@ -18,6 +18,7 @@ test('test incorrect url', async () => {
   const input = form.elements.url;
   const button = form.elements.submit;
   input.value = 'test';
+  input.dispatchEvent(new Event('input'));
   button.click();
   await timer.start('test', 100);
   expect(getTree()).toMatchSnapshot();
