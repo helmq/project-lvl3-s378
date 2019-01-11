@@ -14,10 +14,7 @@ export default () => {
     urlList: new Set(),
     channels: [],
     articles: [],
-    request: {
-      submitting: false,
-      succeed: false,
-    },
+    submittingRequest: false,
   };
 
   const validateUrl = url => isURL(url) || url === '';
@@ -55,8 +52,7 @@ export default () => {
   const submitFail = (url, errorMessage) => {
     state.errorMessage = errorMessage;
     removeUrl(url);
-    state.request.submitting = false;
-    state.request.succeed = false;
+    state.submittingRequest = false;
   };
 
   const requestUrl = () => {
@@ -65,7 +61,7 @@ export default () => {
       state.errorMessage = 'Please enter correct URL';
       return;
     }
-    if (state.request.submitting) {
+    if (state.submittingRequest) {
       state.errorMessage = 'Please wait';
       return;
     }
@@ -73,7 +69,7 @@ export default () => {
       state.errorMessage = 'URL is already exists';
       return;
     }
-    state.request.submitting = true;
+    state.submittingRequest = true;
     addUrl(url);
     axios.get(`${proxy}${url}`).then(({ data }) => {
       const parser = new DOMParser();
@@ -86,8 +82,7 @@ export default () => {
       const { title, description, articles } = parseRSS(rss);
       addChannel({ title, description });
       addArticles(articles);
-      state.request.submitting = false;
-      state.request.succeed = true;
+      state.submittingRequest = false;
     }).catch((e) => {
       submitFail(url, e.message);
     });
@@ -150,10 +145,8 @@ export default () => {
       $(modal).modal('show');
     });
   });
-  watch(state.request, 'succeed', () => {
-    if (state.request.succeed) {
-      form.reset();
-    }
+  watch(state, 'articles', () => {
+    form.reset();
   });
 
   input.addEventListener('input', (e) => { setUrl(e.target.value); });
