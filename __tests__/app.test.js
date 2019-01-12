@@ -3,6 +3,7 @@ import path from 'path';
 import { html } from 'js-beautify';
 import timer from 'timer-promise';
 import init from '../src/init';
+import State from '../src/State';
 
 beforeEach(async () => {
   const pathToHtml = path.resolve(__dirname, '__fixtures__/index.html');
@@ -13,7 +14,8 @@ beforeEach(async () => {
 const getTree = () => html(document.body.innerHTML);
 
 test('test incorrect url', async () => {
-  init();
+  const state = new State();
+  init(state);
   const form = document.getElementById('rss-form');
   const input = form.elements.url;
   const button = form.elements.submit;
