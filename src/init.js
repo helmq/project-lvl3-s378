@@ -59,8 +59,8 @@ const updateFeed = (state) => {
 
 const onChangeUrl = (state) => {
   const { url } = state;
-  const isUrlValid = isURL(url);
-  if (isUrlValid || url === '') {
+  const isUrlValid = isURL(url) || url === '';
+  if (isUrlValid) {
     state.setErrorMessage('');
   }
   state.setIsUrlValid(isUrlValid);
