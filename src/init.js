@@ -15,7 +15,6 @@ const updateArticles = (state) => {
     const newArticles = articles.filter(newArticle => !find(state.articles,
       oldArticle => oldArticle.link === newArticle.link));
     if (newArticles.length > 0) {
-      console.log(newArticles);
       state.addArticles(newArticles);
     }
   }).catch((e) => {
