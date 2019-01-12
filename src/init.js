@@ -26,16 +26,39 @@ const setUrl = (url) => {
   state.url = url;
 };
 const addArticles = (items) => { state.articles.push(...items); };
-const addChannel = (data) => { state.channels.push(data); };
 const addUrl = (url) => { state.urlList.add(url); };
 const removeUrl = (url) => { state.urlList.delete(url); };
-const changeStateOnFailure = (url, errorMessage) => {
-  state.errorMessage = errorMessage;
-  removeUrl(url);
-  state.submittingRequest = false;
+const addChannel = (data) => { state.channels.push(data); };
+
+const requestChannel = url => new Promise((resolve, reject) => {
+  axios.get(`${proxy}${url}`).then(({ data }) => {
+    const rss = parseRSS(data);
+    if (size(rss) === 0) {
+      reject(new Error('Given url contains wrong data'));
+      return;
+    }
+    resolve(rss);
+  }).catch((e) => {
+    reject(e);
+  });
+});
+const addUpdateArticlesJob = (url) => {
+  const update = () => setTimeout(() => {
+    requestChannel(url).then((newData) => {
+      const newArticles = newData.articles.filter(newArticle => !find(state.articles,
+        oldArticle => oldArticle.link === newArticle.link));
+      if (newArticles.length > 0) {
+        addArticles(newArticles);
+      }
+      update();
+    }).catch((e) => {
+      console.log(e.message);
+    });
+  }, 5000);
+  return update;
 };
 
-const requestUrl = () => {
+const updateFeed = () => {
   const { url, isUrlValid, urlList } = state;
   if (!isUrlValid) {
     state.errorMessage = 'Please enter correct URL';
@@ -51,18 +74,17 @@ const requestUrl = () => {
   }
   state.submittingRequest = true;
   addUrl(url);
-  axios.get(`${proxy}${url}`).then(({ data }) => {
-    const rss = parseRSS(data);
-    if (size(rss) === 0) {
-      changeStateOnFailure(url, 'Given url contains wrong data');
-      return;
-    }
-    const { title, description, articles } = rss;
+  requestChannel(url).then((data) => {
+    const { title, description, articles } = data;
     addChannel({ title, description });
     addArticles(articles);
     state.submittingRequest = false;
+    const update = addUpdateArticlesJob(url);
+    update();
   }).catch((e) => {
-    changeStateOnFailure(url, e.message);
+    state.errorMessage = e.message;
+    removeUrl(url);
+    state.submittingRequest = false;
   });
 };
 
@@ -129,6 +151,6 @@ export default () => {
   input.addEventListener('input', (e) => { setUrl(e.target.value); });
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    requestUrl();
+    updateFeed();
   });
 };
