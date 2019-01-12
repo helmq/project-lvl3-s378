@@ -1,5 +1,7 @@
 import 'bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import init from './init';
+import State from './State';
 
-init();
+const state = new State();
+init(state);

@@ -1,8 +1,8 @@
 import { uniqueId } from 'lodash';
 
-export default (data) => {
+export default (content) => {
   const parser = new DOMParser();
-  const parsedData = parser.parseFromString(data, 'application/xml');
+  const parsedData = parser.parseFromString(content.data, 'application/xml');
   const rss = parsedData.querySelector('rss');
   if (!rss) {
     return {};

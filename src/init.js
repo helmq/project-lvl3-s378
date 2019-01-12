@@ -1,94 +1,74 @@
 import { watch } from 'melanke-watchjs';
 import { isURL } from 'validator';
 import axios from 'axios';
-import { find, size } from 'lodash';
+import { find, size, flatten } from 'lodash';
 import $ from 'jquery';
 import parseRSS from './rss';
 
 const proxy = 'http://cors-anywhere.herokuapp.com/';
 
-const state = {
-  url: '',
-  isUrlValid: true,
-  errorMessage: '',
-  urlList: new Set(),
-  channels: [],
-  articles: [],
-  submittingRequest: false,
-};
-
-const setUrl = (url) => {
-  const isUrlValid = isURL(url);
-  if (isUrlValid || url === '') {
-    state.errorMessage = '';
-  }
-  state.isUrlValid = isUrlValid;
-  state.url = url;
-};
-const addArticles = (items) => { state.articles.push(...items); };
-const addUrl = (url) => { state.urlList.add(url); };
-const removeUrl = (url) => { state.urlList.delete(url); };
-const addChannel = (data) => { state.channels.push(data); };
-
-const requestChannel = url => new Promise((resolve, reject) => {
-  axios.get(`${proxy}${url}`).then(({ data }) => {
-    const rss = parseRSS(data);
-    if (size(rss) === 0) {
-      reject(new Error('Given url contains wrong data'));
-      return;
+const updateArticles = (state) => {
+  const urls = Array.from(state.urls);
+  const promises = urls.map(url => axios.get(`${proxy}${url}`));
+  Promise.all(promises).then((allData) => {
+    const articles = flatten(allData.map(parseRSS).map(content => content.articles));
+    const newArticles = articles.filter(newArticle => !find(state.articles,
+      oldArticle => oldArticle.link === newArticle.link));
+    if (newArticles.length > 0) {
+      console.log(newArticles);
+      state.addArticles(newArticles);
     }
-    resolve(rss);
   }).catch((e) => {
-    reject(e);
+    console.log(e.message);
+  }).finally(() => {
+    setTimeout(updateArticles, 5000, state);
   });
-});
-const addUpdateArticlesJob = (url) => {
-  const update = () => setTimeout(() => {
-    requestChannel(url).then((newData) => {
-      const newArticles = newData.articles.filter(newArticle => !find(state.articles,
-        oldArticle => oldArticle.link === newArticle.link));
-      if (newArticles.length > 0) {
-        addArticles(newArticles);
-      }
-      update();
-    }).catch((e) => {
-      console.log(e.message);
-    });
-  }, 5000);
-  return update;
 };
-
-const updateFeed = () => {
-  const { url, isUrlValid, urlList } = state;
+const updateFeed = (state) => {
+  const { url, isUrlValid, urls } = state;
   if (!isUrlValid) {
-    state.errorMessage = 'Please enter correct URL';
+    state.setErrorMessage('Please enter correct URL');
     return;
   }
   if (state.submittingRequest) {
-    state.errorMessage = 'Please wait';
+    state.setErrorMessage('Please wait');
     return;
   }
-  if (urlList.has(url)) {
-    state.errorMessage = 'URL is already exists';
+  if (urls.has(url)) {
+    state.setErrorMessage('URL is already exists');
     return;
   }
-  state.submittingRequest = true;
-  addUrl(url);
-  requestChannel(url).then((data) => {
-    const { title, description, articles } = data;
-    addChannel({ title, description });
-    addArticles(articles);
-    state.submittingRequest = false;
-    const update = addUpdateArticlesJob(url);
-    update();
+  state.setIsRequestSubmitting(true);
+  state.addUrl(url);
+  axios.get(`${proxy}${url}`).then((content) => {
+    const parsed = parseRSS(content);
+    if (size(content) === 0) {
+      state.setErrorMessage('Given url contains wrong data');
+      return;
+    }
+    const { title, description, articles } = parsed;
+    state.addChannel({ title, description });
+    state.addArticles(articles);
+    state.setIsRequestSubmitting(false);
+    updateArticles(state);
   }).catch((e) => {
-    state.errorMessage = e.message;
-    removeUrl(url);
-    state.submittingRequest = false;
+    state.setErrorMessage(e.message);
+    state.removeUrl(url);
+    state.setIsRequestSubmitting(false);
   });
 };
 
-export default () => {
+const onChangeUrl = (state) => {
+  const { url } = state;
+  const isUrlValid = isURL(url);
+  if (isUrlValid || url === '') {
+    state.setErrorMessage('');
+  }
+  state.setIsUrlValid(isUrlValid);
+  state.setUrl(url);
+};
+
+export default (state) => {
   const form = document.getElementById('rss-form');
   const input = form.elements.url;
   const channelsFeed = document.getElementById('channels-feed');
@@ -148,9 +128,12 @@ export default () => {
     form.reset();
   });
 
-  input.addEventListener('input', (e) => { setUrl(e.target.value); });
+  input.addEventListener('input', (e) => {
+    state.setUrl(e.target.value);
+    onChangeUrl(state);
+  });
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    updateFeed();
+    updateFeed(state);
   });
 };
