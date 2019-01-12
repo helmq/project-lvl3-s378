@@ -1,92 +1,72 @@
 import { watch } from 'melanke-watchjs';
 import { isURL } from 'validator';
 import axios from 'axios';
-import { find, uniqueId } from 'lodash';
+import { find, size } from 'lodash';
 import $ from 'jquery';
+import parseRSS from './rss';
 
 const proxy = 'http://cors-anywhere.herokuapp.com/';
 
-export default () => {
-  const state = {
-    url: '',
-    isUrlValid: true,
-    errorMessage: '',
-    urlList: new Set(),
-    channels: [],
-    articles: [],
-    submittingRequest: false,
-  };
+const state = {
+  url: '',
+  isUrlValid: true,
+  errorMessage: '',
+  urlList: new Set(),
+  channels: [],
+  articles: [],
+  submittingRequest: false,
+};
 
-  const parseRSS = (rss) => {
-    const channelTitle = rss.querySelector('title').textContent;
-    const channelDescription = rss.querySelector('description').textContent;
-    const items = rss.querySelectorAll('item');
-    const articles = Object.keys(items).map(key => items[key])
-      .map((article) => {
-        const title = article.querySelector('title').textContent;
-        const description = article.querySelector('description').textContent;
-        const link = article.querySelector('link').textContent;
-        return {
-          title,
-          description,
-          link,
-          id: uniqueId(),
-        };
-      });
-    return { title: channelTitle, description: channelDescription, articles };
-  };
+const setUrl = (url) => {
+  const isUrlValid = isURL(url);
+  if (isUrlValid || url === '') {
+    state.errorMessage = '';
+  }
+  state.isUrlValid = isUrlValid;
+  state.url = url;
+};
+const addArticles = (items) => { state.articles.push(...items); };
+const addChannel = (data) => { state.channels.push(data); };
+const addUrl = (url) => { state.urlList.add(url); };
+const removeUrl = (url) => { state.urlList.delete(url); };
+const changeStateOnFailure = (url, errorMessage) => {
+  state.errorMessage = errorMessage;
+  removeUrl(url);
+  state.submittingRequest = false;
+};
 
-  const setUrl = (url) => {
-    const isUrlValid = isURL(url);
-    if (isUrlValid || url === '') {
-      state.errorMessage = '';
+const requestUrl = () => {
+  const { url, isUrlValid, urlList } = state;
+  if (!isUrlValid) {
+    state.errorMessage = 'Please enter correct URL';
+    return;
+  }
+  if (state.submittingRequest) {
+    state.errorMessage = 'Please wait';
+    return;
+  }
+  if (urlList.has(url)) {
+    state.errorMessage = 'URL is already exists';
+    return;
+  }
+  state.submittingRequest = true;
+  addUrl(url);
+  axios.get(`${proxy}${url}`).then(({ data }) => {
+    const rss = parseRSS(data);
+    if (size(rss) === 0) {
+      changeStateOnFailure(url, 'Given url contains wrong data');
+      return;
     }
-    state.isUrlValid = isUrlValid;
-    state.url = url;
-  };
-  const addArticles = (items) => { state.articles = [...state.articles, ...items]; };
-  const addChannel = (data) => { state.channels = [...state.channels, data]; };
-  const addUrl = (url) => { state.urlList.add(url); };
-  const removeUrl = (url) => { state.urlList.delete(url); };
-  const submitFail = (url, errorMessage) => {
-    state.errorMessage = errorMessage;
-    removeUrl(url);
+    const { title, description, articles } = rss;
+    addChannel({ title, description });
+    addArticles(articles);
     state.submittingRequest = false;
-  };
+  }).catch((e) => {
+    changeStateOnFailure(url, e.message);
+  });
+};
 
-  const requestUrl = () => {
-    const { url, isUrlValid, urlList } = state;
-    if (!isUrlValid) {
-      state.errorMessage = 'Please enter correct URL';
-      return;
-    }
-    if (state.submittingRequest) {
-      state.errorMessage = 'Please wait';
-      return;
-    }
-    if (urlList.has(url)) {
-      state.errorMessage = 'URL is already exists';
-      return;
-    }
-    state.submittingRequest = true;
-    addUrl(url);
-    axios.get(`${proxy}${url}`).then(({ data }) => {
-      const parser = new DOMParser();
-      const parsedData = parser.parseFromString(data, 'application/xml');
-      const rss = parsedData.querySelector('rss');
-      if (!rss) {
-        submitFail(url, 'Given URL contains wrong data');
-        return;
-      }
-      const { title, description, articles } = parseRSS(rss);
-      addChannel({ title, description });
-      addArticles(articles);
-      state.submittingRequest = false;
-    }).catch((e) => {
-      submitFail(url, e.message);
-    });
-  };
-
+export default () => {
   const form = document.getElementById('rss-form');
   const input = form.elements.url;
   const channelsFeed = document.getElementById('channels-feed');
