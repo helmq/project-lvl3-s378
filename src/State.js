@@ -17,8 +17,12 @@ export default class {
     this.url = url;
   }
 
-  setIsUrlValid(isUrlValid) {
-    this.isUrlValid = isUrlValid;
+  urlIsValid() {
+    this.isUrlValid = true;
+  }
+
+  urlIsInvalid() {
+    this.isUrlValid = false;
   }
 
   addArticles(articles) {
@@ -41,7 +45,11 @@ export default class {
     this.channels.push(data);
   }
 
-  setIsRequestSubmitting(isRequestSubmitting) {
-    this.isRequestSubmitting = isRequestSubmitting;
+  submittingRequest() {
+    this.isRequestSubmitting = true;
+  }
+
+  submittingRequestDone() {
+    this.isRequestSubmitting = false;
   }
 }

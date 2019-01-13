@@ -24,12 +24,14 @@ const updateArticles = (state) => {
   });
 };
 const updateFeed = (state) => {
-  const { url, isUrlValid, urls } = state;
+  const {
+    url, isUrlValid, urls, isRequestSubmitting,
+  } = state;
   if (!isUrlValid) {
     state.setErrorMessage('Please enter correct URL');
     return;
   }
-  if (state.submittingRequest) {
+  if (isRequestSubmitting) {
     state.setErrorMessage('Please wait');
     return;
   }
@@ -37,7 +39,7 @@ const updateFeed = (state) => {
     state.setErrorMessage('URL is already exists');
     return;
   }
-  state.setIsRequestSubmitting(true);
+  state.submittingRequest();
   state.addUrl(url);
   axios.get(`${proxy}${url}`).then((content) => {
     const parsed = parseRSS(content);
@@ -48,12 +50,12 @@ const updateFeed = (state) => {
     const { title, description, articles } = parsed;
     state.addChannel({ title, description });
     state.addArticles(articles);
-    state.setIsRequestSubmitting(false);
+    state.submittingRequestDone();
     updateArticles(state);
   }).catch((e) => {
     state.setErrorMessage(e.message);
     state.removeUrl(url);
-    state.setIsRequestSubmitting(false);
+    state.submittingRequestDone();
   });
 };
 
@@ -62,8 +64,10 @@ const onChangeUrl = (state) => {
   const isUrlValid = isURL(url) || url === '';
   if (isUrlValid) {
     state.setErrorMessage('');
+    state.urlIsValid();
+  } else {
+    state.urlIsInvalid();
   }
-  state.setIsUrlValid(isUrlValid);
   state.setUrl(url);
 };
 
