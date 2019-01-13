@@ -5,7 +5,7 @@ export default (content) => {
   const parsedData = parser.parseFromString(content.data, 'application/xml');
   const rss = parsedData.querySelector('rss');
   if (!rss) {
-    return {};
+    throw new Error('Wrong content');
   }
   const channelTitle = rss.querySelector('title').textContent;
   const channelDescription = rss.querySelector('description').textContent;

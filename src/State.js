@@ -13,6 +13,8 @@ export default class {
 
   isRequestSubmitting = false;
 
+  checkingUpdates = false;
+
   setUrl(url) {
     this.url = url;
   }
@@ -45,11 +47,15 @@ export default class {
     this.channels.push(data);
   }
 
-  submittingRequest() {
+  setRequestStatusSubmitting() {
     this.isRequestSubmitting = true;
   }
 
-  submittingRequestDone() {
+  setRequestStatusDone() {
     this.isRequestSubmitting = false;
+  }
+
+  toggleCheckingUpdates() {
+    this.checkingUpdates = !this.checkingUpdates;
   }
 }

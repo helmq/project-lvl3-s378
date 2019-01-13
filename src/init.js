@@ -1,7 +1,7 @@
 import { watch } from 'melanke-watchjs';
 import { isURL } from 'validator';
 import axios from 'axios';
-import { find, size, flatten } from 'lodash';
+import _ from 'lodash';
 import $ from 'jquery';
 import parseRSS from './rss';
 
@@ -11,9 +11,9 @@ const updateArticles = (state) => {
   const urls = Array.from(state.urls);
   const promises = urls.map(url => axios.get(`${proxy}${url}`));
   Promise.all(promises).then((allData) => {
-    const articles = flatten(allData.map(parseRSS).map(content => content.articles));
-    const newArticles = articles.filter(newArticle => !find(state.articles,
-      oldArticle => oldArticle.link === newArticle.link));
+    const fetchedArticles = _.flatten(allData.map(parseRSS).map(content => content.articles));
+    const currentArticles = state.articles;
+    const newArticles = _.differenceBy(fetchedArticles, currentArticles, 'link');
     if (newArticles.length > 0) {
       state.addArticles(newArticles);
     }
@@ -24,38 +24,39 @@ const updateArticles = (state) => {
   });
 };
 const updateFeed = (state) => {
-  const {
-    url, isUrlValid, urls, isRequestSubmitting,
-  } = state;
-  if (!isUrlValid) {
+  if (!state.isUrlValid || state.url === '') {
     state.setErrorMessage('Please enter correct URL');
     return;
   }
-  if (isRequestSubmitting) {
+  if (state.isRequestSubmitting) {
     state.setErrorMessage('Please wait');
     return;
   }
-  if (urls.has(url)) {
+  if (state.urls.has(state.url)) {
     state.setErrorMessage('URL is already exists');
     return;
   }
-  state.submittingRequest();
-  state.addUrl(url);
-  axios.get(`${proxy}${url}`).then((content) => {
-    const parsed = parseRSS(content);
-    if (size(content) === 0) {
-      state.setErrorMessage('Given url contains wrong data');
-      return;
+  state.setRequestStatusSubmitting();
+  state.addUrl(state.url);
+  axios.get(`${proxy}${state.url}`).then((content) => {
+    try {
+      const { title, description, articles } = parseRSS(content);
+      state.addChannel({ title, description });
+      state.addArticles(articles);
+      state.setRequestStatusDone();
+      if (!state.checkingUpdates) {
+        updateArticles(state);
+        state.toggleCheckingUpdates();
+      }
+    } catch (e) {
+      state.setErrorMessage(e.message);
+      state.removeUrl(state.url);
+      state.setRequestStatusDone();
     }
-    const { title, description, articles } = parsed;
-    state.addChannel({ title, description });
-    state.addArticles(articles);
-    state.submittingRequestDone();
-    updateArticles(state);
   }).catch((e) => {
     state.setErrorMessage(e.message);
-    state.removeUrl(url);
-    state.submittingRequestDone();
+    state.removeUrl(state.url);
+    state.setRequestStatusDone();
   });
 };
 
@@ -119,7 +120,7 @@ export default (state) => {
     articlesFeed.innerHTML = articlesHTML.join('<hr>');
     $('button[data-toggle=modal]').click((e) => {
       const { id } = e.target.dataset;
-      const { description, title } = find(articles, a => a.id === id);
+      const { description, title } = _.find(articles, a => a.id === id);
       const modalBody = modal.querySelector('.modal-body');
       const modalTitle = modal.querySelector('.modal-title');
       modalBody.innerHTML = `<p>${description}</p>`;
@@ -138,5 +139,6 @@ export default (state) => {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     updateFeed(state);
+    return false; // prevent submit for Safari
   });
 };
