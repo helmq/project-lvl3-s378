@@ -37,25 +37,23 @@ const updateFeed = (state) => {
     return;
   }
   state.setRequestStatusSubmitting();
-  state.addUrl(state.url);
   axios.get(`${proxy}${state.url}`).then((content) => {
     try {
       const { title, description, articles } = parseRSS(content);
       state.addChannel({ title, description });
       state.addArticles(articles);
       state.setRequestStatusDone();
+      state.addUrl(state.url);
       if (!state.checkingUpdates) {
         updateArticles(state);
         state.toggleCheckingUpdates();
       }
     } catch (e) {
       state.setErrorMessage(e.message);
-      state.removeUrl(state.url);
       state.setRequestStatusDone();
     }
   }).catch((e) => {
     state.setErrorMessage(e.message);
-    state.removeUrl(state.url);
     state.setRequestStatusDone();
   });
 };
